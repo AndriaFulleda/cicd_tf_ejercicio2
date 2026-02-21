@@ -1,0 +1,267 @@
+# Namespace para organizar la aplicación
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: web-app
+  labels:
+    name: web-app
+    ejercicio: simple
+---
+# ConfigMap con la página HTML del frontend
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: web-app
+  name: frontend-html
+data:
+  index.html: |
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Mi App Web Simple</title>
+        <style>
+            body {
+                font-family: 'Arial', sans-serif;
+                margin: 0;
+                padding: 20px;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                text-align: center;
+            }
+            .container {
+                max-width: 800px;
+                margin: 0 auto;
+                background: rgba(255,255,255,0.1);
+                padding: 40px;
+                border-radius: 15px;
+                backdrop-filter: blur(10px);
+            }
+            h1 {
+                font-size: 3em;
+                margin-bottom: 20px;
+                text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            }
+            .api-section {
+                background: rgba(255,255,255,0.2);
+                padding: 20px;
+                border-radius: 10px;
+                margin: 20px 0;
+            }
+            button {
+                background: #4CAF50;
+                color: white;
+                padding: 15px 30px;
+                border: none;
+                border-radius: 5px;
+                cursor: pointer;
+                font-size: 16px;
+                margin: 10px;
+            }
+            button:hover {
+                background: #45a049;
+            }
+            #resultado {
+                background: rgba(0,0,0,0.3);
+                padding: 15px;
+                border-radius: 5px;
+                margin-top: 20px;
+                min-height: 50px;
+            }
+            .info {
+                background: rgba(255,255,255,0.2);
+                padding: 15px;
+                border-radius: 10px;
+                margin: 20px 0;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>🚀 Mi App Web Simple</h1>
+            <p>Frontend desplegado en Kubernetes</p>
+            
+            <div class="info">
+                <h3>📋 Información de la App</h3>
+                <p><strong>Frontend:</strong> Nginx + HTML/CSS/JavaScript</p>
+                <p><strong>Backend:</strong> API REST simulada</p>
+                <p><strong>Infraestructura:</strong> Azure AKS</p>
+            </div>
+
+            <div class="api-section">
+                <h3>🔗 Simulación de API Backend</h3>
+                <p>Haz clic para simular llamadas al backend:</p>
+                <button onclick="llamarAPI()">Llamar API Backend</button>
+                <button onclick="obtenerInfo()">Obtener Info del Sistema</button>
+                <div id="resultado">
+                    <p>Los resultados aparecerán aquí...</p>
+                </div>
+            </div>
+
+            <div class="info">
+                <h3>🎓 Ejercicio de Kubernetes</h3>
+                <p>Esta aplicación demuestra:</p>
+                <ul style="text-align: left; display: inline-block;">
+                    <li>Deployments con réplicas</li>
+                    <li>Services tipo LoadBalancer</li>
+                    <li>ConfigMaps para configuración</li>
+                    <li>Namespaces para organización</li>
+                    <li>Labels y selectors</li>
+                </ul>
+            </div>
+        </div>
+
+        <script>
+            async function llamarAPI() {
+                const resultado = document.getElementById('resultado');
+                resultado.innerHTML = '<p>🔄 Conectando con el backend...</p>';
+                
+                setTimeout(() => {
+                    resultado.innerHTML = `
+                        <h4>✅ Respuesta del Backend:</h4>
+                        <p><strong>Mensaje:</strong> ¡Hola desde el Backend API!</p>
+                        <p><strong>Timestamp:</strong> ${new Date().toLocaleString()}</p>
+                        <p><strong>Pod ID:</strong> backend-${Math.random().toString(36).substr(2, 9)}</p>
+                        <p><strong>Status:</strong> Conectado exitosamente</p>
+                    `;
+                }, 1000);
+            }
+
+            function obtenerInfo() {
+                const resultado = document.getElementById('resultado');
+                resultado.innerHTML = `
+                    <h4>📊 Información del Sistema:</h4>
+                    <p><strong>Navegador:</strong> ${navigator.userAgent.split(' ')[0]}</p>
+                    <p><strong>Hora local:</strong> ${new Date().toLocaleString()}</p>
+                    <p><strong>URL:</strong> ${window.location.href}</p>
+                    <p><strong>Resolución:</strong> ${screen.width}x${screen.height}</p>
+                `;
+            }
+
+            window.onload = function() {
+                setTimeout(() => {
+                    document.getElementById('resultado').innerHTML = `
+                        <p>🎉 ¡Bienvenido! La aplicación está lista.</p>
+                        <p>Haz clic en los botones para probar la funcionalidad.</p>
+                    `;
+                }, 500);
+            }
+        </script>
+    </body>
+    </html>
+---
+# Backend Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: web-app
+  name: backend-api
+  labels:
+    app: backend
+    tier: api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+        tier: api
+    spec:
+      containers:
+      - name: api
+        image: hashicorp/http-echo:latest
+        args:
+          - "-text={\"mensaje\": \"Hola desde el Backend API!\", \"timestamp\": \"$(date)\", \"version\": \"1.0\"}"
+          - "-listen=:3000"
+        ports:
+        - containerPort: 3000
+        env:
+        - name: APP_NAME
+          value: "Backend API"
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+---
+# Backend Service
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: web-app
+  name: backend-service
+  labels:
+    app: backend
+spec:
+  type: LoadBalancer
+  selector:
+    app: backend
+  ports:
+  - protocol: TCP
+    port: 3000
+    targetPort: 3000
+    name: http
+---
+# Frontend Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: web-app
+  name: frontend-web
+  labels:
+    app: frontend
+    tier: web
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+        tier: web
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:latest
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: html-volume
+          mountPath: /usr/share/nginx/html
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+      volumes:
+      - name: html-volume
+        configMap:
+          name: frontend-html
+---
+# Frontend Service
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: web-app
+  name: frontend-service
+  labels:
+    app: frontend
+spec:
+  type: LoadBalancer
+  selector:
+    app: frontend
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 80
+    name: http
